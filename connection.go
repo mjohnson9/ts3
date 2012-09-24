@@ -26,21 +26,18 @@ var (
 )
 
 func Dial(addr *net.TCPAddr) (Connection, error) {
-	println("Dialing server...")
 	conn, err := net.DialTCP("tcp", nil, addr)
 
 	if err != nil {
 		return nil, err
 	}
 
-	println("Creating connection structure...")
 	newConnection := &interalConnection{
 		connection:  conn,
 		commandLock: &sync.Mutex{},
 		readBuffer:  bufio.NewReader(conn),
 	}
 
-	println("Waiting for identification line...")
 	line, _, err := newConnection.readBuffer.ReadLine()
 
 	if err != nil {
@@ -51,7 +48,6 @@ func Dial(addr *net.TCPAddr) (Connection, error) {
 		return nil, ErrNotTeamSpeak
 	}
 
-	println("Waiting for welcome line...")
 	_, _, err = newConnection.readBuffer.ReadLine()
 
 	if err != nil {
@@ -59,21 +55,17 @@ func Dial(addr *net.TCPAddr) (Connection, error) {
 		return nil, err
 	}
 
-	println("All done.")
 	return newConnection, nil
 }
 
 func (conn *interalConnection) SendCommand(command *Command) (*Results, error) {
-	println("Waiting for lock...")
 	conn.commandLock.Lock()
 	defer conn.commandLock.Unlock()
 
-	println("Checking for closed connection...")
 	if conn.isClosed {
 		return nil, ErrConnectionClosed
 	}
 
-	println("Sending data...")
 	_, err := conn.connection.Write([]byte(command.Encode() + "\n"))
 
 	if err != nil {
@@ -85,7 +77,6 @@ func (conn *interalConnection) SendCommand(command *Command) (*Results, error) {
 		incomingResults *Results
 	)
 
-	println("Waiting for lines...")
 	for ; err == nil; incomingLine, _, err = conn.readBuffer.ReadLine() {
 		lineStr := strings.Trim(strings.Trim(string(incomingLine), "\r"), "\n")
 
