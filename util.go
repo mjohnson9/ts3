@@ -4,7 +4,8 @@ import (
 	"strings"
 )
 
-func escapeTS3String(str string) (returnString string) {
+// Escapes a string as specified in the TeamSpeak 3 ServerQuery manual
+func EscapeTS3String(str string) (returnString string) {
 	returnString = str
 
 	returnString = strings.Replace(returnString, "\\", "\\\\", -1)
