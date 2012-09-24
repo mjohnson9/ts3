@@ -34,3 +34,29 @@ func TestUnescape(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkEscape(b *testing.B) {
+	b.StopTimer()
+
+	oldString := "TeamSpeak ]|[ Server"
+
+	b.SetBytes(int64(len(oldString)))
+
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		EscapeTS3String(oldString)
+	}
+}
+
+func BenchmarkUnescape(b *testing.B) {
+	b.StopTimer()
+
+	oldString := "TeamSpeak\\s]\\p[\\sServer"
+
+	b.SetBytes(int64(len(oldString)))
+
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		UnescapeTS3String(oldString)
+	}
+}
