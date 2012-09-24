@@ -91,8 +91,8 @@ func parseError(str string) (id ErrorID, msg string, err error) {
 	}
 
 	id = ErrorID(tempId)
-
 	msg = ourData["msg"]
+
 	err = nil
 
 	return
