@@ -80,28 +80,30 @@ func (conn *interalConnection) SendCommand(command *Command) (*Results, error) {
 	for ; err == nil; incomingLine, _, err = conn.readBuffer.ReadLine() {
 		lineStr := strings.Trim(strings.Trim(string(incomingLine), "\r"), "\n")
 
-		if strings.HasPrefix(lineStr, errorPrefix) {
-			if incomingResults == nil {
-				incomingResults = new(Results)
-			}
+		if len(lineStr) > 0 {
+			if strings.HasPrefix(lineStr, errorPrefix) {
+				if incomingResults == nil {
+					incomingResults = new(Results)
+				}
 
-			var (
-				errorId  ErrorID
-				errorMsg string
-			)
+				var (
+					errorId  ErrorID
+					errorMsg string
+				)
 
-			errorId, errorMsg, err = parseError(lineStr)
+				errorId, errorMsg, err = parseError(lineStr)
 
-			if err != nil {
+				if err != nil {
+					break
+				}
+
+				incomingResults.StatusID = errorId
+				incomingResults.StatusMessage = errorMsg
+
 				break
+			} else {
+				incomingResults, err = decodeResult(lineStr)
 			}
-
-			incomingResults.StatusID = errorId
-			incomingResults.StatusMessage = errorMsg
-
-			break
-		} else {
-			incomingResults, err = decodeResult(lineStr)
 		}
 	}
 

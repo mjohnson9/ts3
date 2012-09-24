@@ -47,11 +47,11 @@ func decodeResult(str string) (*Results, error) {
 		for _, param := range params {
 			values := strings.SplitN(param, "=", 2)
 
-			if len(values) < 2 {
-				return nil, ErrInvalidResult
+			if len(values) == 1 {
+				newResults.Data[num][UnescapeTS3String(values[0])] = ""
+			} else if len(values) == 2 {
+				newResults.Data[num][UnescapeTS3String(values[0])] = UnescapeTS3String(values[1])
 			}
-
-			newResults.Data[num][UnescapeTS3String(values[0])] = UnescapeTS3String(values[1])
 		}
 	}
 

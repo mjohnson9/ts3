@@ -20,3 +20,7 @@ func (cmd *Command) Encode() (encoded string) {
 
 	return
 }
+
+func (cmd *Command) String() string {
+	return cmd.Encode()
+}

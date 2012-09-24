@@ -35,18 +35,20 @@ func TestConnection(t *testing.T) {
 
 	t.Logf("received use results: %#v", res)
 
-	res, err = connection.SendCommand(&Command{
+	command := &Command{
 		Name: "clientlist",
 		Options: []string{
 			"away",
 			"times",
 		},
-	})
+	}
+
+	res, err = connection.SendCommand(command)
 
 	if err != nil {
 		t.Errorf("failed to send clientlist command to TeamSpeak server: %s", err)
 		return
 	}
 
-	t.Logf("received client list: %#v", res)
+	t.Logf("received client list (%s): %#v", command, res)
 }
