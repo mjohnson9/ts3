@@ -22,7 +22,15 @@ var escapeTests = map[string]string{
 func TestEscape(t *testing.T) {
 	for raw, expected := range escapeTests {
 		if escaped := EscapeTS3String(raw); escaped != expected {
-			t.Errorf("Escape(%v) = %v, want %v", raw, escaped, expected)
+			t.Errorf("Escape(%s) = %s, want %s", raw, escaped, expected)
+		}
+	}
+}
+
+func TestUnescape(t *testing.T) {
+	for expected, raw := range escapeTests {
+		if escaped := UnescapeTS3String(raw); escaped != expected {
+			t.Errorf("Unescape(%s) = %s, want %s", raw, escaped, expected)
 		}
 	}
 }

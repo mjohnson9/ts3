@@ -17,12 +17,31 @@ var escapeStrings = map[string]string{
 	"\v": "\\v",
 }
 
+var escapeOrder = []string{"\\", " ", "|", "\a", "\b", "\f", "\n", "\r", "\t", "\v"}
+
 // Escapes a string as specified in the TeamSpeak 3 ServerQuery manual
 func EscapeTS3String(str string) (returnString string) {
 	returnString = str
 
-	for oldString, newString := range escapeStrings {
-		returnString = strings.Replace(returnString, oldString, newString, -1)
+	for i, l := 0, len(escapeOrder); i < l; i++ {
+		oldString := escapeOrder[i]
+		if newString := escapeStrings[oldString]; len(newString) > 0 {
+			returnString = strings.Replace(returnString, oldString, newString, -1)
+		}
+	}
+
+	return
+}
+
+// Does the opposite of EscapeTS3String
+func UnescapeTS3String(str string) (returnString string) {
+	returnString = str
+
+	for i := len(escapeOrder) - 1; i >= 0; i-- {
+		oldString := escapeOrder[i]
+		if newString := escapeStrings[oldString]; len(newString) > 0 {
+			returnString = strings.Replace(returnString, newString, oldString, -1)
+		}
 	}
 
 	return
