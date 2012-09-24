@@ -21,7 +21,7 @@ var escapeTests = map[string]string{
 
 func TestEscape(t *testing.T) {
 	for raw, expected := range escapeTests {
-		if escaped := escapeTS3String(raw); escaped != expected {
+		if escaped := EscapeTS3String(raw); escaped != expected {
 			t.Errorf("Escape(%v) = %v, want %v", raw, escaped, expected)
 		}
 	}
