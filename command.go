@@ -7,6 +7,7 @@ type Command struct {
 	Options    []string          // the options (-name) of this command
 }
 
+// Encode encodes a command to a format acceptable by the TeamSpeak server
 func (cmd *Command) Encode() (encoded string) {
 	encoded += cmd.Name
 
@@ -21,6 +22,7 @@ func (cmd *Command) Encode() (encoded string) {
 	return
 }
 
+// String is an alias of Encode in order to implement the Stringer interface.
 func (cmd *Command) String() string {
 	return cmd.Encode()
 }

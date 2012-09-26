@@ -22,10 +22,14 @@ type Result map[string]string
 
 type ErrorID int64
 
+// Results contains the result of a command sent to a TeamSpeak 3 server.
 type Results struct {
-	StatusID      ErrorID
+	// StatusID is the `id` field returned by the "error" response of the TeamSpeak server.
+	StatusID ErrorID
+	// StatusMessage is the `msg` field returned by the "error" response of the TeamSpeak server.
 	StatusMessage string
-	Data          []Result
+	// Data is all of the data returned by the TeamSpeak server.
+	Data []Result
 }
 
 func decodeResult(str string) (*Results, error) {

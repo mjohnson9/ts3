@@ -4,7 +4,9 @@ import (
 	"strings"
 )
 
-// Escapes a string as specified in the TeamSpeak 3 ServerQuery manual
+// Escapes a string as specified in the TeamSpeak 3 ServerQuery manual.
+//
+// Note that you generally do not need to call this yourself.
 func EscapeTS3String(str string) (returnString string) {
 	returnString = str
 
@@ -22,7 +24,7 @@ func EscapeTS3String(str string) (returnString string) {
 	return
 }
 
-// Does the opposite of EscapeTS3String
+// Unescapes a string that was escaped, as according to the TeamSpeak 3 ServerQuery manual.
 func UnescapeTS3String(str string) (returnString string) {
 	returnString = str
 

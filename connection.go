@@ -8,8 +8,12 @@ import (
 	"sync"
 )
 
+// A Connection is a connection between you and a TeamSpeak server.
 type Connection interface {
+	// SendCommand sends the given command to this connection.
+	// It will return an error if the connection is closed or it encounters any other problems.
 	SendCommand(command *Command) (*Results, error)
+	// Close closes this connection. Whether or not Close closes the underlying socket is up to the implementation.
 	Close()
 }
 
@@ -25,6 +29,7 @@ var (
 	ErrConnectionClosed = errors.New("this connect has been closed and therefore cannot send data")
 )
 
+// This dials the TeamSpeak 3 ServerQuery interface at the given address.
 func Dial(addr *net.TCPAddr) (Connection, error) {
 	conn, err := net.DialTCP("tcp", nil, addr)
 
