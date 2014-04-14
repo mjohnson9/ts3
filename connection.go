@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net"
 	"strings"
-	"sync"
 )
 
 // A Connection is a connection between you and a TeamSpeak server.
@@ -18,10 +17,9 @@ type Connection interface {
 }
 
 type interalConnection struct {
-	connection  *net.TCPConn
-	commandLock *sync.Mutex
-	readBuffer  *bufio.Reader
-	isClosed    bool
+	connection *net.TCPConn
+	readBuffer *bufio.Reader
+	isClosed   bool
 }
 
 var (
@@ -38,9 +36,8 @@ func Dial(addr *net.TCPAddr) (Connection, error) {
 	}
 
 	newConnection := &interalConnection{
-		connection:  conn,
-		commandLock: &sync.Mutex{},
-		readBuffer:  bufio.NewReader(conn),
+		connection: conn,
+		readBuffer: bufio.NewReader(conn),
 	}
 
 	line, _, err := newConnection.readBuffer.ReadLine()
@@ -64,9 +61,6 @@ func Dial(addr *net.TCPAddr) (Connection, error) {
 }
 
 func (conn *interalConnection) SendCommand(command *Command) (*Results, error) {
-	conn.commandLock.Lock()
-	defer conn.commandLock.Unlock()
-
 	if conn.isClosed {
 		return nil, ErrConnectionClosed
 	}
@@ -77,20 +71,17 @@ func (conn *interalConnection) SendCommand(command *Command) (*Results, error) {
 		return nil, err
 	}
 
-	var (
-		incomingLine    []byte
-		incomingResults *Results
-	)
+	incomingResults := new(Results)
 
-	for ; err == nil; incomingLine, _, err = conn.readBuffer.ReadLine() {
-		lineStr := strings.Trim(strings.Trim(string(incomingLine), "\r"), "\n")
+	for {
+		lineStr, err := conn.readBuffer.ReadString('\n')
+		if err != nil {
+			break
+		}
+		lineStr = strings.Trim(lineStr, "\r\n")
 
 		if len(lineStr) > 0 {
 			if strings.HasPrefix(lineStr, errorPrefix) {
-				if incomingResults == nil {
-					incomingResults = new(Results)
-				}
-
 				var (
 					errorId  ErrorID
 					errorMsg string
@@ -120,9 +111,6 @@ func (conn *interalConnection) SendCommand(command *Command) (*Results, error) {
 }
 
 func (conn *interalConnection) Close() {
-	conn.commandLock.Lock()
-	defer conn.commandLock.Unlock()
-
 	conn.connection.Close()
 	conn.isClosed = true
 }
