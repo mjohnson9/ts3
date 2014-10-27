@@ -17,14 +17,22 @@ type Connection interface {
 }
 
 type interalConnection struct {
-	connection *net.TCPConn
-	readBuffer *bufio.Reader
-	isClosed   bool
+	connection  *net.TCPConn
+	commandChan chan internalCommandRequest
+}
+
+type internalCommandRequest struct {
+	Command      Command
+	responseChan chan internalCommandResponse
+}
+
+type internalCommandResponse struct {
+	Error   error
+	Results *Results
 }
 
 var (
-	ErrNotTeamSpeak     = errors.New("the provided address is not a TeamSpeak 3 ServerQuery address")
-	ErrConnectionClosed = errors.New("this connect has been closed and therefore cannot send data")
+	ErrNotTeamSpeak = errors.New("the provided address is not a TeamSpeak 3 ServerQuery address")
 )
 
 // This dials the TeamSpeak 3 ServerQuery interface at the given address.
@@ -36,81 +44,113 @@ func Dial(addr *net.TCPAddr) (Connection, error) {
 	}
 
 	newConnection := &interalConnection{
-		connection: conn,
-		readBuffer: bufio.NewReader(conn),
+		connection:  conn,
+		commandChan: make(chan internalCommandRequest),
 	}
 
-	line, _, err := newConnection.readBuffer.ReadLine()
+	bufferedConnection := bufio.NewReader(newConnection.connection)
+
+	// Read the initial line and remove the \n from it.
+	line, err := bufferedConnection.ReadString('\n')
+	line = strings.TrimSuffix(line, "\n")
 
 	if err != nil {
-		newConnection.connection.Close()
+		newConnection.Close()
 		return nil, err
-	} else if string(line) != "TS3" {
-		newConnection.connection.Close()
+	} else if line != "TS3" {
+		newConnection.Close()
 		return nil, ErrNotTeamSpeak
 	}
 
-	_, _, err = newConnection.readBuffer.ReadLine()
+	// Read and discard the welcome line
+	_, err = bufferedConnection.ReadString('\n')
 
 	if err != nil {
-		newConnection.connection.Close()
+		newConnection.Close()
 		return nil, err
 	}
+
+	go newConnection.process()
 
 	return newConnection, nil
 }
 
-func (conn *interalConnection) SendCommand(command *Command) (*Results, error) {
-	if conn.isClosed {
-		return nil, ErrConnectionClosed
-	}
+func (conn *interalConnection) process() {
+	bufferedConnection := bufio.NewReader(conn.connection)
 
-	_, err := conn.connection.Write([]byte(command.Encode() + "\n"))
+	for toProcess := range conn.commandChan {
+		_, err := conn.connection.Write([]byte(toProcess.Command.Encode() + "\n"))
 
-	if err != nil {
-		return nil, err
-	}
-
-	incomingResults := new(Results)
-
-	for {
-		lineStr, err := conn.readBuffer.ReadString('\n')
 		if err != nil {
-			break
+			toProcess.responseChan <- internalCommandResponse{
+				Error: err,
+			}
+			close(toProcess.responseChan)
+			continue
 		}
-		lineStr = strings.Trim(lineStr, "\r\n")
 
-		if len(lineStr) > 0 {
-			if strings.HasPrefix(lineStr, errorPrefix) {
-				var (
-					errorId  ErrorID
-					errorMsg string
-				)
+		incomingResults := new(Results)
 
-				errorId, errorMsg, err = parseError(lineStr)
-
-				if err != nil {
-					break
-				}
-
-				incomingResults.StatusID = errorId
-				incomingResults.StatusMessage = errorMsg
-
+		for {
+			var lineStr string
+			lineStr, err = bufferedConnection.ReadString('\n')
+			if err != nil {
 				break
+			}
+			lineStr = strings.TrimPrefix(strings.TrimSuffix(lineStr, "\n"), "\r")
+
+			if len(lineStr) > 0 {
+				if strings.HasPrefix(lineStr, errorPrefix) {
+					var (
+						errorId  ErrorID
+						errorMsg string
+					)
+
+					errorId, errorMsg, err = parseError(lineStr)
+
+					if err != nil {
+						break
+					}
+
+					incomingResults.StatusID = errorId
+					incomingResults.StatusMessage = errorMsg
+
+					break
+				} else {
+					incomingResults, err = decodeResult(lineStr)
+				}
 			} else {
-				incomingResults, err = decodeResult(lineStr)
+				break
 			}
 		}
+
+		if err != nil {
+			toProcess.responseChan <- internalCommandResponse{
+				Error: err,
+			}
+			close(toProcess.responseChan)
+			continue
+		}
+
+		toProcess.responseChan <- internalCommandResponse{
+			Results: incomingResults,
+		}
+		close(toProcess.responseChan)
+	}
+}
+
+func (conn *interalConnection) SendCommand(command *Command) (*Results, error) {
+	responseChan := make(chan internalCommandResponse)
+	conn.commandChan <- internalCommandRequest{
+		Command:      *command,
+		responseChan: responseChan,
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
-	return incomingResults, nil
+	response := <-responseChan
+	return response.Results, response.Error
 }
 
 func (conn *interalConnection) Close() {
+	close(conn.commandChan)
 	conn.connection.Close()
-	conn.isClosed = true
 }
